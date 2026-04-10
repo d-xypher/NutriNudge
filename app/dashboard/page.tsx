@@ -7,6 +7,9 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NudgeSection from '@/components/dashboard/NudgeSection';
 import MealTimeline from '@/components/dashboard/MealTimeline';
 import type { MealDocument, NudgeDocument } from '@/types';
+import { DEMO_MEALS, DEMO_NUDGES } from '@/lib/demo-data';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -15,6 +18,7 @@ export default function DashboardPage() {
   const [meals, setMeals] = useState<MealDocument[]>([]);
   const [nudges, setNudges] = useState<NudgeDocument[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !onboardingComplete) {
@@ -39,18 +43,35 @@ export default function DashboardPage() {
           const mealsData = await mealsRes.json();
           const nudgesData = await nudgesRes.json();
           if (mounted) {
-            setMeals(mealsData.meals || []);
-            setNudges(nudgesData.nudges || []);
-            setDataLoaded(true);
-
-            // If we have meals but no nudges, start polling
-            if (mealsData.meals.length >= 2 && nudgesData.nudges?.length === 0) {
-              startPolling();
+            // Use demo data if empty or if API failed (e.g., Firestore disabled)
+            const hasMeals = mealsData.meals && mealsData.meals.length > 0;
+            
+            if (hasMeals) {
+              setMeals(mealsData.meals);
+              setNudges(nudgesData.nudges || []);
+              setIsDemoMode(false);
+              
+              if (mealsData.meals.length >= 2 && (!nudgesData.nudges || nudgesData.nudges.length === 0)) {
+                startPolling();
+              }
+            } else {
+              setMeals(DEMO_MEALS);
+              setNudges(DEMO_NUDGES);
+              setIsDemoMode(true);
             }
+            setDataLoaded(true);
           }
+        } else {
+           throw new Error("Failed to fetch");
         }
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
+        if (mounted) {
+          setMeals(DEMO_MEALS);
+          setNudges(DEMO_NUDGES);
+          setIsDemoMode(true);
+          setDataLoaded(true);
+        }
       }
     };
 
@@ -86,6 +107,15 @@ export default function DashboardPage() {
       <div className="max-w-4xl mx-auto px-4 md:px-6">
         <DashboardHeader meals={meals} />
         
+        {isDemoMode && dataLoaded && (
+          <Alert className="mb-8 border-primary/50 bg-primary/5">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-primary font-medium">
+              You're viewing the dashboard in Demo Mode with sample data. Once you log your own meals, this will update automatically!
+            </AlertDescription>
+          </Alert>
+        )}
+
         <NudgeSection
           nudges={nudges}
           isLoading={!dataLoaded}

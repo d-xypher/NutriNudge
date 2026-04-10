@@ -105,8 +105,11 @@ export default function LogMealForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-300">
       <div className="space-y-3">
-        <label className="text-sm font-medium">What did you eat?</label>
+        <label htmlFor="meal-name" className="text-sm font-medium">
+          What did you eat?
+        </label>
         <Input
+          id="meal-name"
           placeholder="e.g., Avocado toast with two eggs"
           value={name}
           onChange={(e) => {
@@ -119,13 +122,17 @@ export default function LogMealForm() {
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">Category</label>
+        <p className="text-sm font-medium" id="meal-category-label">
+          Category
+        </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {CATEGORIES.map((cat) => (
             <button
               type="button"
               key={cat.id}
               onClick={() => setCategory(cat.id)}
+              aria-pressed={category === cat.id}
+              aria-describedby="meal-category-label"
               className={cn(
                 'flex flex-col items-center justify-center p-3 rounded-xl border transition-all',
                 category === cat.id
@@ -141,8 +148,11 @@ export default function LogMealForm() {
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">Time</label>
+        <label htmlFor="meal-time" className="text-sm font-medium">
+          Time
+        </label>
         <Input
+          id="meal-time"
           type="time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
@@ -151,15 +161,18 @@ export default function LogMealForm() {
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-muted-foreground">
+        <p className="text-sm font-medium text-muted-foreground" id="meal-mood-label">
           Mood <span className="font-normal">(Optional)</span>
-        </label>
+        </p>
         <div className="flex gap-2">
           {MOODS.map((m) => (
             <button
               type="button"
               key={m.id}
               onClick={() => setMood(m.id)}
+              aria-label={`Mood ${m.id.replace('_', ' ')}`}
+              aria-pressed={mood === m.id}
+              aria-describedby="meal-mood-label"
               className={cn(
                 'w-12 h-12 flex items-center justify-center text-2xl rounded-full border transition-all',
                 mood === m.id
@@ -174,15 +187,17 @@ export default function LogMealForm() {
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-muted-foreground">
+        <p className="text-sm font-medium text-muted-foreground" id="meal-energy-label">
           Energy Level <span className="font-normal">(Optional)</span>
-        </label>
+        </p>
         <div className="flex divide-x border rounded-lg overflow-hidden">
           {ENERGIES.map((e) => (
             <button
               type="button"
               key={e}
               onClick={() => setEnergy(e)}
+              aria-pressed={energy === e}
+              aria-describedby="meal-energy-label"
               className={cn(
                 'flex-1 py-2 text-sm font-medium capitalize transition-colors',
                 energy === e
@@ -196,7 +211,11 @@ export default function LogMealForm() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger font-medium">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-danger font-medium">
+          {error}
+        </p>
+      )}
 
       <Button type="submit" size="lg" className="w-full text-base font-semibold" disabled={isSubmitting}>
         {isSubmitting ? 'Saving...' : 'Log Meal'}

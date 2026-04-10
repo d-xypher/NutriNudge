@@ -1,24 +1,33 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBZnTaBg6Ou9u3b3wHkSxqcdKI8P_rMlTc",
-  authDomain: "amdproject-78f48.firebaseapp.com",
-  projectId: "amdproject-78f48",
-  storageBucket: "amdproject-78f48.firebasestorage.app",
-  messagingSenderId: "694524114107",
-  appId: "1:694524114107:web:68b6a86f97d539294b259e",
-  measurementId: "G-91EMJVYMYW"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+function hasFirebaseConfig() {
+  return !!(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.storageBucket &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId
+  );
+}
 
-// Initialize Analytics conditionally (only in browser)
+const app = hasFirebaseConfig() ? (getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)) : null;
+
 export const initAnalytics = async () => {
-  if (typeof window !== "undefined" && (await isSupported())) {
+  if (!app) return null;
+  if (typeof window !== 'undefined' && (await isSupported())) {
     return getAnalytics(app);
   }
   return null;

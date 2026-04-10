@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
+import { parseSessionId } from '@/lib/validation';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const sessionId = searchParams.get('sessionId');
+    const sessionId = parseSessionId(searchParams.get('sessionId'));
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Valid sessionId is required' }, { status: 400 });
     }
 
     const snapshot = await db

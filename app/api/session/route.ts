@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
+import { asObject, parseSessionId } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId } = await req.json();
+    const body = asObject(await req.json());
+    const sessionId = parseSessionId(body?.sessionId);
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Valid sessionId is required' }, { status: 400 });
     }
 
     const sessionRef = db.collection('sessions').doc(sessionId);

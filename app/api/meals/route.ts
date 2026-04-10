@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
+import {
+  asObject,
+  asTrimmedString,
+  ENERGY_LEVELS,
+  isInEnum,
+  MEAL_CATEGORIES,
+  parseSessionId,
+} from '@/lib/validation';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const sessionId = searchParams.get('sessionId');
+    const sessionId = parseSessionId(searchParams.get('sessionId'));
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Valid sessionId is required' }, { status: 400 });
     }
 
     const snapshot = await db
@@ -35,9 +43,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, name, category, mood, energy } = await req.json();
+    const body = asObject(await req.json());
+    const sessionId = parseSessionId(body?.sessionId);
+    const name = asTrimmedString(body?.name, 120);
+    const category = body?.category;
+    const moodValue = body?.mood;
+    const energyValue = body?.energy;
 
-    if (!sessionId || !name || !category) {
+    const mood = moodValue == null ? null : asTrimmedString(moodValue, 40);
+    const energy =
+      energyValue == null
+        ? null
+        : isInEnum(energyValue, ENERGY_LEVELS)
+        ? energyValue
+        : null;
+
+    if (!sessionId || !name || !isInEnum(category, MEAL_CATEGORIES)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -45,8 +66,8 @@ export async function POST(req: NextRequest) {
       sessionId,
       name,
       category,
-      mood: mood || null,
-      energy: energy || null,
+      mood,
+      energy,
       loggedAt: FieldValue.serverTimestamp(),
     });
 

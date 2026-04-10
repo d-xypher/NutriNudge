@@ -2,13 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { getGeminiModel } from '@/lib/gemini';
 import { FieldValue } from 'firebase-admin/firestore';
+import { asObject, NUDGE_URGENCY, parseSessionId } from '@/lib/validation';
+
+function sanitizeNudge(item: Record<string, unknown>) {
+  const patternDetected = typeof item.pattern_detected === 'string' ? item.pattern_detected.trim() : '';
+  const title = typeof item.nudge_title === 'string' ? item.nudge_title.trim() : '';
+  const body = typeof item.nudge_body === 'string' ? item.nudge_body.trim() : '';
+  const urgencyCandidate = item.urgency;
+  const urgency =
+    typeof urgencyCandidate === 'string' && NUDGE_URGENCY.includes(urgencyCandidate)
+      ? urgencyCandidate
+      : 'low';
+
+  return {
+    patternDetected: patternDetected.slice(0, 160),
+    title: title.slice(0, 80),
+    body: body.slice(0, 280),
+    urgency,
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId } = await req.json();
+    const body = asObject(await req.json());
+    const sessionId = parseSessionId(body?.sessionId);
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Valid sessionId is required' }, { status: 400 });
     }
 
     // Fetch session data
@@ -91,17 +111,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ nudges: [], message: 'Failed to generate nudges' });
     }
 
+    const safeNudges = parsedNudges
+      .filter((nudge) => nudge && typeof nudge === 'object')
+      .map((nudge) => sanitizeNudge(nudge))
+      .filter((nudge) => nudge.title && nudge.body)
+      .slice(0, 3);
+
+    if (safeNudges.length === 0) {
+      return NextResponse.json({ nudges: [], message: 'No valid nudges generated' });
+    }
+
     const batch = db.batch();
     const returnedNudges = [];
 
-    for (const item of parsedNudges) {
+    for (const item of safeNudges) {
       const nudgeRef = db.collection('nudges').doc();
       const nudgeData = {
         sessionId,
-        patternDetected: item.pattern_detected || '',
-        title: item.nudge_title || '',
-        body: item.nudge_body || '',
-        urgency: item.urgency || 'low',
+        patternDetected: item.patternDetected,
+        title: item.title,
+        body: item.body,
+        urgency: item.urgency,
         generatedAt: FieldValue.serverTimestamp(),
       };
       batch.set(nudgeRef, nudgeData);

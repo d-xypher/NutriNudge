@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
+import { asObject, asTrimmedString, parseSessionId } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, goal, restrictions, mealSchedule } = await req.json();
+    const body = asObject(await req.json());
+    const sessionId = parseSessionId(body?.sessionId);
+    const goal = asTrimmedString(body?.goal, 80);
+    const restrictions = asTrimmedString(body?.restrictions, 200);
+    const mealSchedule = asTrimmedString(body?.mealSchedule, 120);
 
     if (!sessionId || !goal || !restrictions || !mealSchedule) {
       return NextResponse.json({ error: 'Missing required onboarding fields' }, { status: 400 });
